@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام إدارة بيانات المستخدمين (CRUD)</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap');
+        body { font-family: 'Tajawal', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen p-4 md:p-8 text-gray-800">
+
+    <div class="max-w-5xl mx-auto">
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-indigo-600 mb-2"><i class="fas fa-users-cog ml-2"></i>نظام إدارة المستخدمين (CRUD)</h1>
+            <p class="text-gray-500">مشروع متكامل لإضافة، عرض، تعديل، وحذف بيانات المستخدمين مع حفظها محلياً.</p>
+        </header>
+
+        <div id="alertContainer" class="fixed top-5 left-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-fit">
+                <h2 id="formTitle" class="text-xl font-bold text-gray-700 mb-6 flex items-center gap-2">
+                    <i class="fas fa-user-plus text-indigo-500"></i> <span id="formTitleText">إضافة مستخدم جديد</span>
+                </h2>
+                
+                <form id="userForm" class="space-y-5" novalidate>
+                    <input type="hidden" id="userId">
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">الاسم الكامل</label>
+                        <input type="text" id="userName" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" placeholder="أدخل 3 أحرف على الأقل">
+                        <p class="text-xs text-red-500 mt-1 hidden" id="nameError"></p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">العمر</label>
+                        <input type="number" id="userAge" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" placeholder="من 1 إلى 120 سنة">
+                        <p class="text-xs text-red-500 mt-1 hidden" id="ageError"></p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">البريد الإلكتروني</label>
+                        <input type="email" id="userEmail" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-left outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" placeholder="example@domain.com">
+                        <p class="text-xs text-red-500 mt-1 hidden" id="emailError"></p>
+                    </div>
+
+                    <div class="flex gap-2 pt-2">
+                        <button type="submit" id="submitBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2">
+                            <i class="fas fa-check"></i> <span id="submitBtnText">حفظ البيانات</span>
+                        </button>
+                        <button type="button" id="cancelBtn" class="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl transition-colors hidden cursor-pointer">
+                            إلغاء
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+                <div class="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
+                    <h2 class="text-xl font-bold text-gray-700 flex items-center gap-2">
+                        <i class="fas fa-list text-indigo-500"></i> قائمة المستخدمين
+                    </h2>
+                    <span id="userCount" class="bg-indigo-50 text-indigo-600 text-xs font-bold px-3 py-1 rounded-full">المجموع: 0</span>
+                </div>
+
+                <div class="overflow-x-auto flex-grow">
+                    <table class="w-full text-right border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50 text-gray-500 text-sm border-b border-gray-100">
+                                <th class="p-4 font-semibold">الاسم</th>
+                                <th class="p-4 font-semibold">العمر</th>
+                                <th class="p-4 font-semibold">البريد الإلكتروني</th>
+                                <th class="p-4 font-semibold text-center w-32">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userTableBody" class="divide-y divide-gray-100 text-sm text-gray-700">
+                            </tbody>
+                    </table>
+                    
+                    <div id="emptyState" class="p-12 text-center text-gray-400 hidden">
+                        <i class="fas fa-users text-4xl mb-3 block text-gray-300"></i>
+                        <p>لا يوجد مستخدمين مضافين حالياً.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        
+        const userForm = document.getElementById('userForm');
+        const userIdInput = document.getElementById('userId');
+        const nameInput = document.getElementById('userName');
+        const ageInput = document.getElementById('userAge');
+        const emailInput = document.getElementById('userEmail');
+        
+        const formTitleText = document.getElementById('formTitleText');
+        const submitBtnText = document.getElementById('submitBtnText');
+        const cancelBtn = document.getElementById('cancelBtn');
+        
+        const userTableBody = document.getElementById('userTableBody');
+        const emptyState = document.getElementById('emptyState');
+        const userCountBadge = document.getElementById('userCount');
+        const alertContainer = document.getElementById('alertContainer');
+
+        
+        let users = JSON.parse(localStorage.getItem('crud_users')) || [];
+        let isEditMode = false;
+
+       
+        
+       
+        function showAlert(message, type = 'success') {
+            const alert = document.createElement('div');
+            alert.className = `p-4 rounded-xl shadow-lg border text-sm flex items-center gap-3 transition-all duration-300 transform translate-x-[-20px] opacity-0 pointer-events-auto bg-white`;
+            
+            if (type === 'success') {
+                alert.classList.add('border-green-100', 'text-green-800');
+                alert.innerHTML = `<i class="fas fa-check-circle text-green-500 text-lg"></i> <span>${message}</span>`;
+            } else if (type === 'danger') {
+                alert.classList.add('border-red-100', 'text-red-800');
+                alert.innerHTML = `<i class="fas fa-exclamation-circle text-red-500 text-lg"></i> <span>${message}</span>`;
+            }
+
+            alertContainer.appendChild(alert);
+            
+           
+            setTimeout(() => {
+                alert.classList.remove('translate-x-[-20px]', 'opacity-0');
+            }, 10);
+
+           
+            setTimeout(() => {
+                alert.classList.add('translate-x-[-20px]', 'opacity-0');
+                setTimeout(() => alert.remove(), 300);
+            }, 3000);
+        }
+
+        function setError(inputElement, errorElement, message) {
+            inputElement.classList.add('border-red-500', 'focus:border-red-500', 'focus:ring-red-100');
+            inputElement.classList.remove('border-gray-200', 'focus:border-indigo-500', 'focus:ring-indigo-100');
+            errorElement.textContent = message;
+            errorElement.classList.remove('hidden');
+            return false;
+        }
+
+        function clearError(inputElement, errorElement) {
+            inputElement.classList.remove('border-red-500', 'focus:border-red-500', 'focus:ring-red-100');
+            inputElement.classList.add('border-gray-200', 'focus:border-indigo-500', 'focus:ring-indigo-100');
+            errorElement.classList.add('hidden');
+        }
+
+        function validateForm() {
+            let isValid = true;
+            
+            
+            const nameValue = nameInput.value.trim();
+            const ageValue = ageInput.value.trim();
+            const emailValue = emailInput.value.trim();
+
+            if (!nameValue) {
+                isValid = setError(nameInput, document.getElementById('nameError'), 'هذا الحقل مطلوب.');
+            } else if (nameValue.length < 3) {
+                isValid = setError(nameInput, document.getElementById('nameError'), 'يجب أن يكون الاسم 3 أحرف على الأقل.');
+            } else {
+                clearError(nameInput, document.getElementById('nameError'));
+            }
+
+            const ageNum = parseInt(ageValue);
+            if (!ageValue) {
+                isValid = setError(ageInput, document.getElementById('ageError'), 'هذا الحقل مطلوب.');
+            } else if (isNaN(ageNum) || ageNum < 1 || ageNum > 120) {
+                isValid = setError(ageInput, document.getElementById('ageError'), 'يرجى إدخال عمر منطقي بين 1 و 120 سنة.');
+            } else {
+                clearError(ageInput, document.getElementById('ageError'));
+            }
+
+            const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            if (!emailValue) {
+                isValid = setError(emailInput, document.getElementById('emailError'), 'هذا الحقل مطلوب.');
+            } else if (!emailRegex.test(emailValue)) {
+                isValid = setError(emailInput, document.getElementById('emailError'), 'صيغة البريد الإلكتروني غير صحيحة.');
+            } else {
+                clearError(emailInput, document.getElementById('emailError'));
+            }
+
+            return isValid;
+        }
+
+        function saveAndRender() {
+            localStorage.setItem('crud_users', JSON.stringify(users));
+            renderTable();
+        }
+        function resetFormState() {
+            userForm.reset();
+            userIdInput.value = '';
+            isEditMode = false;
+            formTitleText.textContent = 'إضافة مستخدم جديد';
+            submitBtnText.textContent = 'حفظ البيانات';
+            cancelBtn.classList.add('hidden');
+            
+           
+            clearError(nameInput, document.getElementById('nameError'));
+            clearError(ageInput, document.getElementById('ageError'));
+            clearError(emailInput, document.getElementById('emailError'));
+        }
+
+        
+        function renderTable() {
+            userTableBody.innerHTML = '';
+            userCountBadge.textContent = `المجموع: ${users.length}`;
+
+            if (users.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+
+            users.forEach((user) => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50/70 transition-colors border-b border-gray-100';
+                tr.innerHTML = `
+                    <td class="p-4 font-medium text-gray-900 max-w-[150px] truncate">${user.name}</td>
+                    <td class="p-4 text-gray-500">${user.age} سنة</td>
+                    <td class="p-4 text-gray-500 text-left font-mono break-all">${user.email}</td>
+                    <td class="p-4 text-center">
+                        <div class="flex items-center justify-center gap-1.5">
+                            <button onclick="editUser('${user.id}')" class="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer" title="تعديل">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="deleteUser('${user.id}')" class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer" title="حذف">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                userTableBody.appendChild(tr);
+            });
+        }
+
+        
+        userForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            if (!validateForm()) return;         
+
+            const userData = {
+                id: isEditMode ? userIdInput.value : Date.now().toString(),  
+                name: nameInput.value.trim(),
+                age: parseInt(ageInput.value.trim()),
+                email: emailInput.value.trim()
+            };
+
+            if (isEditMode) {
+                
+                users = users.map(user => user.id === userData.id ? userData : user);
+                showAlert('تم تحديث بيانات المستخدم بنجاح.', 'success');
+            } else {
+                users.push(userData);
+                showAlert('تم إضافة المستخدم بنجاح.', 'success');
+            }
+
+            saveAndRender();
+            resetFormState();
+        });
+
+        window.editUser = function(id) {
+            const user = users.find(u => u.id === id);
+            if (!user) return;
+
+            userIdInput.value = user.id;
+            nameInput.value = user.name;
+            ageInput.value = user.age;
+            emailInput.value = user.email;
+
+            isEditMode = true;
+            formTitleText.textContent = 'تعديل بيانات المستخدم';
+            submitBtnText.textContent = 'تحديث البيانات';
+            cancelBtn.classList.remove('hidden');
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        window.deleteUser = function(id) {
+            if (confirm('هل أنت متأكد من رغبتك في حذف هذا المستخدم نهائياً؟')) {
+                users = users.filter(user => user.id !== id);
+                
+                if (isEditMode && userIdInput.value === id) {
+                    resetFormState();
+                }
+
+                showAlert('تم حذف المستخدم بنجاح.', 'danger');
+                saveAndRender();
+            }
+        };
+
+        cancelBtn.addEventListener('click', resetFormState);
+
+        renderTable();
+    </script>
+</body>
+</html>
